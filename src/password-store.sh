@@ -294,6 +294,21 @@ cmd_init() {
 	git_add_file "$PREFIX/$id_path" "Reencrypt password store using new GPG id ${id_print%, }${id_path:+ ($id_path)}."
 }
 
+cmd_who() {
+  local RED='\033[0;31m'
+  local NC='\033[0m' # No Color
+  local emailorid='\b([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,6})|(ID [A-Za-z0-9]*)\b'
+  local out=$(mktemp)
+
+	while read -r -d "" passfile; do
+    local ids="$(gpg --list-only --no-default-keyring --secret-keyring /dev/null $passfile 2>&1 | grep -E -o "$emailorid" | sed 's/ID /ID-/' )"
+    local passfilepretty="$(echo "${passfile#$PREFIX}" | sed 's/\.gpg$//g' | sed 's/^\///g')"
+    echo -e "${RED}${passfilepretty}${NC}:" $ids >> $out
+	done < <(find -L "$PREFIX" -iname '*.gpg' -print0)
+  column -t < $out
+  rm $out
+}
+
 cmd_show() {
 	local opts clip_location clip=0
 	opts="$($GETOPT -o c:: -l clip:: -n "$PROGRAM" -- "$@")"
@@ -585,6 +600,7 @@ case "$1" in
 	show|ls|list) shift;		cmd_show "$@" ;;
 	find|search) shift;		cmd_find "$@" ;;
 	grep) shift;			cmd_grep "$@" ;;
+	who) shift;			cmd_who "$@" ;;
 	insert|add) shift;		cmd_insert "$@" ;;
 	edit) shift;			cmd_edit "$@" ;;
 	generate) shift;		cmd_generate "$@" ;;
